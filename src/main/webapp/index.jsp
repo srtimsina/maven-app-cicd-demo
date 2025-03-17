@@ -1,6 +1,5 @@
 <html>
 <body>
-<h2>Hello DevOps! Welcome to Jenkins Training...</h2>
-<p>Deploying to Tomcat</p>
+<h2>Hello DevOps!</h2>
 </body>
 </html>
