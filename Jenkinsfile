@@ -1,61 +1,49 @@
 pipeline {
     agent any
     environment {
-        scannerHome = tool 'sonar7.0'
+        dockerImage = "suryaraj/devops-midday"
     }
-stages{
+stages {
         stage('Build') {
-            steps {
-                sh 'mvn -f pom.xml install -DskipTests'
+            steps { 
+                sh 'mvn package -f pom.xml'
             }
             post {
                 success {
                     echo 'Now Archiving it...'
-                    archiveArtifacts artifacts: '**/target/*.war'
+                    archiveArtifacts artifacts: '**/*.war'
                 }
             }
         }
-        stage('UNIT TEST') {
-            steps {
-                sh 'mvn -f pom.xml test'
+        stage('Create Tomcat Image') {
+            steps { 
+                copyArtifacts filter: '**/*.war', fingerprintArtifacts: true, projectName: env.JOB_NAME, selector: specific(env.BUILD_NUMBER)
+                sh 'docker image build -t $dockerImage:$BUILD_NUMBER .'
             }
         }
-        stage('Checkstyle Analysis') {
+
+        }
+        stage('Trivy Scan for Docker Image') {
             steps {
-                sh 'mvn -f pom.xml checkstyle:checkstyle'
+                sh 'echo '
+                sh 'trivy image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed $dockerImage:$BUILD_NUMBER'
             }
         }
-        stage('Sonar Analysis') {
+
+        stage('Push Scanned Image to DockerHub') {
             steps {
-                withSonarQubeEnv('sonar') {
-                    sh '''${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=java-tomcat-sample \
-                        -Dsonar.projectName=java-tomcat-sample \
-                        -Dsonar.projectVersion=4.0 \
-                        -Dsonar.sources=src/ \
-                        -Dsonar.junit.reportsPath=target/surefire-reports/ \
-                        -Dsonar.jacoco.reportsPath=target/jacoco.exec \
-                        -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml'''
+                withDockerRegistry([credentialsId: 'dockerhub-credentials', url: '']) {
+                    sh '''
+                    docker push $dockerImage:$BUILD_NUMBER
+                    '''
                 }
             }
         }
-stage("UploadArtifact") {
-            steps {
-                nexusArtifactUploader(
-                    nexusVersion: 'nexus3',
-                    protocol: 'http',
-                    nexusUrl: '172.31.25.191:8081',
-                    groupId: 'QA',
-                    version: "${env.BUILD_ID}-${env.BUILD_TIMESTAMP}",
-                    repository: 'java-app',
-                    credentialsId: 'sonartypecred',
-                    artifacts: [
-                        [artifactId: 'java-tomcat-sample',
-                         classifier: '',
-                         file: 'target/java-tomcat-maven-example.war',
-                         type: 'war']
-                    ]
-                )
+
+        stage('Deploy to staging') {
+            steps { 
+                sh 'docker run -itd --name tomcatInstanceStaging -p 8082:8080 $dockerImage:$BUILD_NUMBER'
             }
         }
-}
+    }
 }
