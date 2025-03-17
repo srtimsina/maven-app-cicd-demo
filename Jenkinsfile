@@ -22,7 +22,6 @@ stages {
             }
         }
 
-        }
         stage('Trivy Scan for Docker Image') {
             steps {
                 sh 'echo '
