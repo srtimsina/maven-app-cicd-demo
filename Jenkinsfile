@@ -3,7 +3,7 @@ pipeline{
         label 'JenkinsSlave'
     }
     environment {
-        dockerImage = ""
+        dockerImage = "pradipchaudhary7/jenkinspipelinesetup"
     }
     stages{
         stage('Build Java App'){
