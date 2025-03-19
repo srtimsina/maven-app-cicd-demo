@@ -1,39 +1,44 @@
-pipeline {
-    agent any
-    environment {
-        dockerImage= 'pradipchaudhary7/jenkinspipelinesetup'
-        // scannerHome = tool 'sonar7.0'
+pipeline{
+    agent {
+        label 'JenkinsSlave'
     }
-stages{
-        stage('Build') {
-            steps {
-                sh 'mvn -f pom.xml -clean package'
-                
+    environment {
+        dockerImage = ""
+    }
+    stages{
+        stage('Build Java App'){
+            agent {
+              label 'JenkinsSlave'
             }
-            post {
+            steps{
+            sh 'mvn -f pom.xml clean package'
+            }
+            post{
                 success {
-                    echo 'Now Archiving it...'
-                    archiveArtifacts artifacts: '**/target/*.war'
+                echo "Build completed, so archiving the war file"
+                archiveArtifacts artifacts: '**/*.war', followSymlinks: false
                 }
             }
         }
-        
-stage('Create Docker image'){
+        stage('Create Docker image'){
+            agent {
+              label 'JenkinsSlave'
+           }
             steps{
               copyArtifacts filter: '**/*.war', fingerprintArtifacts: true, projectName: env.JOB_NAME, selector: specific(env.BUILD_NUMBER)
               echo "creating docker image"
-              sh 'whoami'
               sh 'docker build -t $dockerImage:$BUILD_NUMBER .'
             }
         }
         stage('Trivy Scan for Docker Image') {
             steps {
                 echo "Scanning docker images... phase"
-             //   sh 'trivy image --exit-code 1 --severity HIGH,CRITICAL --ignore-unfixed $dockerImage:$BUILD_NUMBER'
             }
         }
         stage('Push Image'){
-          
+          agent {
+            label 'JenkinsSlave'
+          }
             steps {
                 withDockerRegistry([credentialsId: 'dockerhub-credentials', url: '']) {
                     sh '''
@@ -43,7 +48,9 @@ stage('Create Docker image'){
             }
         }
         stage('Deploy to Development Env') {
-            
+            agent {
+                label 'JenkinsSlave'
+            }
             steps {
                 echo "Running app on development env"
                 sh '''
@@ -54,7 +61,9 @@ stage('Create Docker image'){
             }
         }
         stage('Deploy Production Environment') {
-            
+            agent {
+                label 'JenkinsSlave'
+            }
             steps {
                 timeout(time:1, unit:'DAYS'){
                 input message:'Approve PRODUCTION Deployment?'
@@ -66,32 +75,6 @@ stage('Create Docker image'){
                 docker run -itd --name tomcatInstanceProd -p 8083:8080 $dockerImage:$BUILD_NUMBER
                 '''
             }
-        }
-    }
-    
-    post { 
-        always { 
-            mail to: 'devopsuryaraj@gmail.com',
-            subject: "Job '${JOB_NAME}' (${BUILD_NUMBER}) status",
-            body: "Please go to ${BUILD_URL} and verify the build"
-        }
-
-        success {
-            mail bcc: '', body: """Hi Team,
-            Build #$BUILD_NUMBER is successful, please go through the url
-            $BUILD_URL
-            and verify the details.
-            Regards,
-            DevOps Team""", cc: '', from: '', replyTo: '', subject: 'BUILD SUCCESS NOTIFICATION', to: 'devopsuryaraj@gmail.com'
-        }
-
-        failure {
-                mail bcc: '', body: """Hi Team,
-                Build #$BUILD_NUMBER is unsuccessful, please go through the url
-                $BUILD_URL
-                and verify the details.
-                Regards,
-                DevOps Team""", cc: '', from: '', replyTo: '', subject: 'BUILD FAILED NOTIFICATION', to: 'devopsuryaraj@gmail.com'
         }
     }
 }
