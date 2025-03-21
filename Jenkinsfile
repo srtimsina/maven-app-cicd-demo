@@ -1,5 +1,7 @@
 pipeline {
-    agent any
+    agent {
+        label 'ubuntu-slave'
+    }
     environment {
         dockerImage = "suryaraj/devops-midday"
     }
@@ -16,6 +18,9 @@ stages {
             }
         }
         stage('Create Tomcat Image') {
+        agent {
+             label 'ubuntu-slave'
+           }
             steps { 
                 copyArtifacts filter: '**/*.war', fingerprintArtifacts: true, projectName: env.JOB_NAME, selector: specific(env.BUILD_NUMBER)
                 sh 'docker image build -t $dockerImage:$BUILD_NUMBER .'
@@ -39,10 +44,28 @@ stages {
             }
         }
 
-        stage('Deploy to staging') {
+        stage('Deploy to Development') {
             steps { 
-                sh 'docker run -itd --name tomcatInstanceStaging -p 8082:8080 $dockerImage:$BUILD_NUMBER'
+                sh '''
+                docker stop tomcatInstanceDev || true
+                docker rm tomcatInstanceDev || true
+                docker run -itd --name tomcatInstanceDev -p 8082:8080 $dockerImage:$BUILD_NUMBER
+                '''                
+            }
+        }
+
+        stage('Deploy to Production') {
+            steps { 
+                timeout(time:1, unit:'DAYS'){
+                input message:'Approve PRODUCTION Deployment?'
+                }
+                sh '''
+                docker stop tomcatInstanceProd || true
+                docker rm tomcatInstanceProd || true
+                docker run -itd --name tomcatInstanceProd -p 8083:8080 $dockerImage:$BUILD_NUMBER
+                '''   
             }
         }
     }
+
 }
