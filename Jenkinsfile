@@ -30,6 +30,18 @@ pipeline {
               sh 'docker build -t $dockerImage:$BUILD_NUMBER .'
             }
         }
+        stage('Push Image'){
+          agent {
+            label 'ubuntu-slave-node'
+          }
+            steps {
+                withDockerRegistry([credentialsId: 'dockerhubcredentials', url: '']) {
+                    sh '''
+                    docker push $dockerImage:$BUILD_NUMBER
+                    '''
+                }
+            }
+        }
         stage('DeploytoDevenv') {
             steps {
                 echo 'Deploing to deve env'
