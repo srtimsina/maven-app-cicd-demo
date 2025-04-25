@@ -42,9 +42,17 @@ pipeline {
                 }
             }
         }
-        stage('DeploytoDevenv') {
+        stage('Deploy to Development Env') {
+            agent {
+                label 'ubuntu-slave-node'
+            }
             steps {
-                echo 'Deploing to deve env'
+                echo "Running app on development env"
+                sh '''
+                docker stop tomcatInstanceDev || true
+                docker rm tomcatInstanceDev || true
+                docker run -itd --name tomcatInstanceDev -p 8082:8080 $dockerImage:$BUILD_NUMBER 
+                sh '''
             }
         }
         stage('Deploytoprod') {
