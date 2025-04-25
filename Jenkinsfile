@@ -55,9 +55,20 @@ pipeline {
                 sh '''
             }
         }
-        stage('Deploytoprod') {
+        stage('Deploy Production Environment') {
+            agent {
+                label 'ubuntu-slave-node'
+            }
             steps {
-                echo 'Deploying to production env.'
+                timeout(time:5, unit:'MINUTES'){
+                input message:'Approve PRODUCTION Deployment?'
+                }
+                echo "Running app on Prod env"
+                sh '''
+                docker stop tomcatInstanceProd || true
+                docker rm tomcatInstanceProd || true
+                docker run -itd --name tomcatInstanceProd -p 8083:8080 $dockerImage:$BUILD_NUMBER
+                '''
             }
         }
     }
