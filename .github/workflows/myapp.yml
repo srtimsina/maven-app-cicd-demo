@@ -7,7 +7,7 @@ on:
 jobs:
   build:
 
-    runs-on: hosted
+    runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
