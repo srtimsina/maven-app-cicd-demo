@@ -1,61 +1,80 @@
-pipeline {
-    agent any
-    environment {
-        scannerHome = tool 'sonar7.0'
+pipeline{
+    agent {
+        label 'JenkinsSlave'
     }
-stages{
-        stage('Build') {
-            steps {
-                sh 'mvn -f pom.xml install -DskipTests'
+    environment {
+        dockerImage = "pradipchaudhary7/jenkinspipelinesetup"
+    }
+    stages{
+        stage('Build Java App'){
+            agent {
+              label 'JenkinsSlave'
             }
-            post {
+            steps{
+            sh 'mvn -f pom.xml clean package'
+            }
+            post{
                 success {
-                    echo 'Now Archiving it...'
-                    archiveArtifacts artifacts: '**/target/*.war'
+                echo "Build completed, so archiving the war file"
+                archiveArtifacts artifacts: '**/*.war', followSymlinks: false
                 }
             }
         }
-        stage('UNIT TEST') {
-            steps {
-                sh 'mvn -f pom.xml test'
+        stage('Create Docker image'){
+            agent {
+              label 'JenkinsSlave'
+           }
+            steps{
+              copyArtifacts filter: '**/*.war', fingerprintArtifacts: true, projectName: env.JOB_NAME, selector: specific(env.BUILD_NUMBER)
+              echo "creating docker image"
+              sh 'docker build -t $dockerImage:$BUILD_NUMBER .'
             }
         }
-        stage('Checkstyle Analysis') {
+        stage('Trivy Scan for Docker Image') {
             steps {
-                sh 'mvn -f pom.xml checkstyle:checkstyle'
+                echo "Scanning docker images... phase"
             }
         }
-        stage('Sonar Analysis') {
+        stage('Push Image'){
+          agent {
+            label 'JenkinsSlave'
+          }
             steps {
-                withSonarQubeEnv('sonar') {
-                    sh '''${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=java-tomcat-sample \
-                        -Dsonar.projectName=java-tomcat-sample \
-                        -Dsonar.projectVersion=4.0 \
-                        -Dsonar.sources=src/ \
-                        -Dsonar.junit.reportsPath=target/surefire-reports/ \
-                        -Dsonar.jacoco.reportsPath=target/jacoco.exec \
-                        -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml'''
+                withDockerRegistry([credentialsId: 'dockerhub-credentials', url: '']) {
+                    sh '''
+                    docker push $dockerImage:$BUILD_NUMBER
+                    '''
                 }
             }
         }
-stage("UploadArtifact") {
+        stage('Deploy to Development Env') {
+            agent {
+                label 'JenkinsSlave'
+            }
             steps {
-                nexusArtifactUploader(
-                    nexusVersion: 'nexus3',
-                    protocol: 'http',
-                    nexusUrl: '172.31.25.191:8081',
-                    groupId: 'QA',
-                    version: "${env.BUILD_ID}-${env.BUILD_TIMESTAMP}",
-                    repository: 'java-app',
-                    credentialsId: 'sonartypecred',
-                    artifacts: [
-                        [artifactId: 'java-tomcat-sample',
-                         classifier: '',
-                         file: 'target/java-tomcat-maven-example.war',
-                         type: 'war']
-                    ]
-                )
+                echo "Running app on development env"
+                sh '''
+                docker stop tomcatInstanceDev || true
+                docker rm tomcatInstanceDev || true
+                docker run -itd --name tomcatInstanceDev -p 8082:8080 $dockerImage:$BUILD_NUMBER 
+                sh '''
             }
         }
-}
+        stage('Deploy Production Environment') {
+            agent {
+                label 'JenkinsSlave'
+            }
+            steps {
+                timeout(time:1, unit:'DAYS'){
+                input message:'Approve PRODUCTION Deployment?'
+                }
+                echo "Running app on Prod env"
+                sh '''
+                docker stop tomcatInstanceProd || true
+                docker rm tomcatInstanceProd || true
+                docker run -itd --name tomcatInstanceProd -p 8083:8080 $dockerImage:$BUILD_NUMBER
+                '''
+            }
+        }
+    }
 }
