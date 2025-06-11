@@ -30,6 +30,7 @@ stages{
                 withSonarQubeEnv('sonarqube') {
                     sh '''${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=java-tomcat-sample \
                         -Dsonar.projectName=java-tomcat-sample \
+                        -Dsonar.branch.name=devops-morning-june9 \
                         -Dsonar.projectVersion=4.0 \
                         -Dsonar.sources=src/ \
                         -Dsonar.junit.reportsPath=target/surefire-reports/ \
