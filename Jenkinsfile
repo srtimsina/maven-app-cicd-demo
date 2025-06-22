@@ -7,6 +7,12 @@ pipeline {
                 echo 'Packaging the app'
                 sh 'mvn clean package'
             }
+            post {
+                success {
+                    echo 'Now Archiving it...'
+                    archiveArtifacts artifacts: '**/*.war'
+                }
+            }
         }
         stage('Unit test') {
             steps {
