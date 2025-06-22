@@ -4,7 +4,8 @@ pipeline {
     stages {
         stage('Compile code') {
             steps {
-                echo 'We are compiling the coe'
+                echo 'Packaging the app'
+                sh 'mvn clean package'
             }
         }
         stage('Unit test') {
