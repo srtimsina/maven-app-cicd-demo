@@ -18,7 +18,8 @@ pipeline {
         stage('Build docker image') {
             steps {
                 echo 'Building docker image'
-                sh 'docker image build -t exampleJavaApp:$BUILD_NUMBER .'
+                sh 'whoami'
+                sh 'docker image build -t mylocalrepo/simplejavaapp:$BUILD_NUMBER .'
             }
         }
         stage('Scan docker image') {
