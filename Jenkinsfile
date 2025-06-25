@@ -21,9 +21,9 @@ pipeline {
                 sh 'docker image build -t exampleJavaApp:$BUILD_NUMBER .'
             }
         }
-        stage('Build docker image') {
+        stage('Scan docker image') {
             steps {
-                echo 'Creating docker image'
+                echo 'Scaning docker image'
             }
         }
         stage('Push image to registry') {
