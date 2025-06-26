@@ -50,5 +50,18 @@ pipeline {
                 '''
             }
         }
+        stage('Deploy to Staging') {
+            steps{
+                timeout(time:5, unit:'MINUTES'){
+                input message:'Approve PRODUCTION Deployment?'
+                }
+                echo "Deploying to Staging env"
+                sh '''
+                docker container stop mysimeapp-staging || true
+                docker container rm mysimeapp-staging || true
+                docker run -d --name mysimeapp-staging -p 8083:8080 $REPO_NAME:$BUILD_NUMBER
+                '''
+            }
+        }
     }
 }
