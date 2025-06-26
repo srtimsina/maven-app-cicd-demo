@@ -25,11 +25,17 @@ pipeline {
         stage('Scan docker image') {
             steps {
                 echo 'Scaning docker image'
+                sh 'trivy image mylocalrepo/simplejavaapp:$BUILD_NUMBER'
             }
         }
         stage('Push image to registry') {
             steps {
                 echo 'Pushing images'
+                withDockerRegistry([credentialsId: 'dockerhubcredentials', url: '']) {
+                    sh '''
+                    docker push mylocalrepo/simplejavaapp:$BUILD_NUMBER
+                    '''
+                }
             }
         }
     }
