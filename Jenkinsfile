@@ -44,8 +44,8 @@ pipeline {
             steps{
                 echo "Deploying to dev env"
                 sh '''
-                docker container stop mysimeapp || true
-                docker container rm mysimeapp || true
+                #docker container stop mysimeapp || true
+                #docker container rm mysimeapp || true
                 docker run -d --name mysimeapp -p 8082:8080 $REPO_NAME:$BUILD_NUMBER
                 '''
             }
