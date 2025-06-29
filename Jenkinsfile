@@ -1,6 +1,6 @@
 pipeline {
     agent {
-        label='ubuntu-slave'
+        label 'ubuntu-slave'
     }
    environment {
     REPO_NAME = 'suryaraj/simplejavaapp'
