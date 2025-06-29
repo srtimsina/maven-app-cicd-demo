@@ -1,12 +1,13 @@
 pipeline {
-    agent {
-        label 'ubuntu-slave'
-    }
+    agent any
    environment {
     REPO_NAME = 'suryaraj/simplejavaapp'
    }
     stages {
         stage('Compile code') {
+            agent {
+                label 'ubuntu-slave'
+            }
             steps {
                 echo 'Packaging the app'
                 sh 'mvn clean package'
@@ -20,6 +21,9 @@ pipeline {
         }
 
         stage('Build docker image') {
+            agent{
+                label 'built-innode'
+            }
             steps {
                 echo 'Building docker image'
                 sh 'whoami'
@@ -27,6 +31,9 @@ pipeline {
             }
         }
         stage('Scan docker image') {
+            agent {
+                label 'built-innode'
+            }
             steps {
                 echo 'Scaning docker image'
                 sh 'trivy image $REPO_NAME:$BUILD_NUMBER'
