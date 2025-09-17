@@ -21,13 +21,14 @@ pipeline {
                 }
             }
         }
-        stage('Unit Test')
-        agent {
-            label 'ubuntu-slave'
-        }
-        steps{
-            echo 'Running Unit Tests'
-            sh 'mvn test'
+        stage('Unit Test') {
+            agent {
+                label 'ubuntu-slave'
+            }
+            steps {
+                echo 'Running Unit Tests'
+                sh 'mvn test'
+            }
         }
         stage('Checkstyle Analysis') {
             steps {
