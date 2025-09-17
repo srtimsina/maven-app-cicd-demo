@@ -14,12 +14,6 @@ pipeline {
                 echo 'Packaging the app'
                 sh 'mvn clean compile'
             }
-            post {
-                success {
-                    echo 'Now Archiving it...'
-                    archiveArtifacts artifacts: '**/*.war'
-                }
-            }
         }
         stage('Unit Test') {
             agent {
