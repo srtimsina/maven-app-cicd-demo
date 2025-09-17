@@ -1,5 +1,7 @@
 pipeline {
-    agent any
+    agent {
+        label 'ubuntu-slave'
+    }
    environment {
     REPO_NAME = 'suryaraj/simplejavaapp'
    }
@@ -10,7 +12,7 @@ pipeline {
             }
             steps {
                 echo 'Packaging the app'
-                sh 'mvn clean package'
+                sh 'mvn clean compile'
             }
             post {
                 success {
@@ -19,59 +21,37 @@ pipeline {
                 }
             }
         }
-
-        stage('Build docker image') {
-            agent{
-                label 'built-innode'
-            }
+        stage('Unit Test')
+        agent {
+            label 'ubuntu-slave'
+        }
+        steps{
+            echo 'Running Unit Tests'
+            sh 'mvn test'
+        }
+        stage('Checkstyle Analysis') {
             steps {
-                echo 'Building docker image'
-                sh 'whoami'
-                sh 'docker image build -t $REPO_NAME:$BUILD_NUMBER .'
+                sh 'mvn checkstyle:checkstyle'
             }
         }
-        stage('Scan docker image') {
+        stage('SonarQube Analysis'){
             agent {
-                label 'built-innode'
+                label 'ubuntu-slave'
             }
             steps {
-                echo 'Scaning docker image'
-                sh 'trivy image $REPO_NAME:$BUILD_NUMBER'
-            }
-        }
-        stage('Push image to registry') {
-            steps {
-                echo 'Pushing images'
-                withDockerRegistry([credentialsId: 'dockerhubcredentials', url: '']) {
-                    sh '''
-                    docker push $REPO_NAME:$BUILD_NUMBER
-                    '''
+                withSonarQubeEnv('local-sonarqube') {
+                    sh '''${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=java-tomcat-sample \
+                        -Dsonar.projectName=java-tomcat-sample \
+                        -Dsonar.projectVersion=4.0 \
+                        -Dsonar.sources=jenkins/java-tomcat-sample/src/ \
+                        -Dsonar.junit.reportsPath=target/surefire-reports/ \
+                        -Dsonar.jacoco.reportsPath=target/jacoco.exec \
+                        -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml'''
                 }
+
             }
         }
-        stage('Deploy to devenv') {
-            steps{
-                echo "Deploying to dev env"
-                sh '''
-                #docker container stop mysimeapp || true
-                #docker container rm mysimeapp || true
-                docker run -d --name mysimeapp -p 8082:8080 $REPO_NAME:$BUILD_NUMBER
-                '''
-            }
-        }
-        stage('Deploy to Staging') {
-            steps{
-                timeout(time:5, unit:'MINUTES'){
-                input message:'Approve PRODUCTION Deployment?'
-                }
-                echo "Deploying to Staging env"
-                sh '''
-                docker container stop mysimeapp-staging || true
-                docker container rm mysimeapp-staging || true
-                docker run -d --name mysimeapp-staging -p 8083:8080 $REPO_NAME:$BUILD_NUMBER
-                '''
-            }
-        }
+
     }
 post { 
         always { 
