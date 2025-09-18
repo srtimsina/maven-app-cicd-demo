@@ -1,24 +1,16 @@
 pipeline {
-    agent {
-        label 'ubuntu-slave'
-    }
+    agent any
    environment {
     REPO_NAME = 'suryaraj/simplejavaapp'
    }
     stages {
         stage('Compile code') {
-            agent {
-                label 'ubuntu-slave'
-            }
             steps {
                 echo 'Packaging the app'
                 sh 'mvn clean compile'
             }
         }
         stage('Unit Test') {
-            agent {
-                label 'ubuntu-slave'
-            }
             steps {
                 echo 'Running Unit Tests'
                 sh 'mvn test'
@@ -30,9 +22,6 @@ pipeline {
             }
         }
         stage('SonarQube Analysis'){
-            agent {
-                label 'ubuntu-slave'
-            }
             steps {
                 withSonarQubeEnv('local-sonarqube') {
                     sh '''${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=java-tomcat-sample \
