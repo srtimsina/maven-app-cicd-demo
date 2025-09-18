@@ -1,8 +1,8 @@
 pipeline {
     agent any
    environment {
-    REPO_NAME = 'suryaraj/simplejavaapp'
-   }
+        scannerHome = tool 'sonar7.2'
+     }
     stages {
         stage('Compile code') {
             steps {
