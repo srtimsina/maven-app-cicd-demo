@@ -6,8 +6,14 @@ pipeline {
     stages {
         stage('Compile code') {
             steps {
-                echo 'Packaging the app'
-                sh 'mvn clean compile'
+                echo 'Compiling the app'
+                sh 'mvn -f pom.xml install -DskipTests'
+            }
+            post {
+                success {
+                    echo 'Now Archiving it...'
+                    archiveArtifacts artifacts: '**/target/*.war'
+                }
             }
         }
         stage('Unit Test') {
