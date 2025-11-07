@@ -1,12 +1,31 @@
 pipeline {
     agent any
-
+   environment {
+        scannerHome = tool 'sonar7.2'
+     }
     stages {
-        stage('Hello') {
+        stage('Compile code') {
             steps {
-                echo 'Hello World'
+                echo 'Compiling the app'
+                sh 'mvn -f pom.xml install -DskipTests'
+            }
+            post {
+                success {
+                    echo 'Now Archiving it...'
+                    archiveArtifacts artifacts: '**/target/*.war'
+                }
             }
         }
-    }
+        stage('Unit Test') {
+            steps {
+                echo 'Running Unit Tests'
+                sh 'mvn test'
+            }
+        }
+        stage('Checkstyle Analysis') {
+            steps {
+                sh 'mvn checkstyle:checkstyle'
+            }
+        }
 }
-
+}
