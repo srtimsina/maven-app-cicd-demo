@@ -1,8 +1,5 @@
 pipeline {
     agent any
-   environment {
-        scannerHome = tool 'sonarqube730'
-     }
     stages {
         stage('Compile code') {
             steps {
@@ -27,26 +24,13 @@ pipeline {
                 sh 'mvn checkstyle:checkstyle'
             }
         }
-        stage('SonarQube Analysis'){
-            steps {
-                withSonarQubeEnv('devops-sq-server') {
-                    sh '''${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=java-tomcat-sample \
-                        -Dsonar.projectName=java-tomcat-sample \
-                        -Dsonar.projectVersion=4.0 \
-                        -Dsonar.sources=src/ \
-                        -Dsonar.junit.reportsPath=target/surefire-reports/ \
-                        -Dsonar.jacoco.reportsPath=target/jacoco.exec \
-                        -Dsonar.java.checkstyle.reportPaths=target/checkstyle-result.xml'''
-                }
 
-            }
-        }
 stage("UploadArtifact") {
             steps {
                 nexusArtifactUploader(
                     nexusVersion: 'nexus3',
                     protocol: 'http',
-                    nexusUrl: '172.31.22.105:8081',
+                    nexusUrl: '172.31.23.76:8081',
                     groupId: 'QA',
                     version: "${env.BUILD_ID}-${env.BUILD_TIMESTAMP}",
                     repository: 'java-sample-app',
