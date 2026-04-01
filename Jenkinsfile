@@ -41,5 +41,24 @@ pipeline {
 
             }
         }
+stage("UploadArtifact") {
+            steps {
+                nexusArtifactUploader(
+                    nexusVersion: 'nexus3',
+                    protocol: 'http',
+                    nexusUrl: '172.31.27.28:8081',
+                    groupId: 'QA',
+                    version: "${env.BUILD_ID}-${env.BUILD_TIMESTAMP}",
+                    repository: 'java-tomcat-sample-app',
+                    credentialsId: 'nexus-cred',
+                    artifacts: [
+                        [artifactId: 'java-tomcat-sample',
+                         classifier: '',
+                         file: 'target/java-tomcat-maven-example.war',
+                         type: 'war']
+                    ]
+                )
+            }
+        }
 }
 }
